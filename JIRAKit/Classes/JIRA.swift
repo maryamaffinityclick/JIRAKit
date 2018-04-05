@@ -7,7 +7,6 @@
 //
 
 import Foundation
-import MBProgressHUD
 
 public class JIRA {
     
