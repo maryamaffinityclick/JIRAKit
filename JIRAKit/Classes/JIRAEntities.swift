@@ -273,7 +273,7 @@ public class JIRAField{
     }
 }
 
-public class JIRAIssueType{
+public class JIRAIssueType: JIRAEntity{
     open var id:String?
     var desc:String?
     var iconUrl:String?
@@ -307,12 +307,16 @@ public class JIRAIssueType{
         }
         self.fields = fields
     }
+    
+    override func export()->Any?{
+        return ["id":id ?? "","name":name ?? ""]
+    }
 }
 
-open class JIRAProject {
-    var id:String?
-    var key:String?
-    var name:String?
+public class JIRAProject:JIRAEntity {
+    public var id:String?
+    public var key:String?
+    public var name:String?
     var avatarUrls:[String:String]?
     open var issueTypes:[JIRAIssueType]?
     func applyData(data:[AnyHashable:Any]){
@@ -334,6 +338,10 @@ open class JIRAProject {
             })
             self.issueTypes = issueTypesOutput
         }
+    }
+    
+    override func export()->Any?{
+        return ["id":id ?? "","name":name ?? ""]
     }
 }
 
@@ -413,4 +421,3 @@ class JIRAIssue:JIRAEntity,DisplayClass {
         }
     }
 }
-
