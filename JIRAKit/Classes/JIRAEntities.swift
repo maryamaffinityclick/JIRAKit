@@ -9,42 +9,46 @@
 import Foundation
 
 
-protocol DisplayClass:NSObjectProtocol {
+protocol DisplayClass: NSObjectProtocol {
     var label:String?{get}
-    func applyData(data:[AnyHashable:Any])
+    func applyData(data: [AnyHashable:Any])
 }
 
 protocol ChildrenClass {
     var children:[Any]?{get}
 }
 
-enum JIRASchemaType:String {
-    case string = "string"
-    case issuetype = "issuetype"
-    case priority = "priority"
+enum JIRASchemaType: String {
     case project = "project"
+    case issuetype = "issuetype"
+    
+    case string = "string"
+    case priority = "priority"
     case user = "user"
     case array = "array"
     case number = "number"
 }
 
-enum JIRAOperations:String {
+enum JIRAOperations: String {
     case set = "set"
     case add = "add"
     case remove = "remove"
 }
 
-enum JIRASchemaSystem:String {
+enum JIRASchemaSystem: String {
+    case labels = "labels"
+    case summary = "summary"
+    case description = "description"
+    case attachment = "attachment"
+
     case assignee = "assignee"
     case fixVersions = "fixVersions"
-    case labels = "labels"
     case issuelinks = "issuelinks"
     case priority = "priority"
     case environment = "environment"
-    case attachment = "attachment"
 }
 
-public class JIRAEntity :NSObject {
+public class JIRAEntity: NSObject {
     required public override init() {
         super.init()
     }
@@ -54,13 +58,36 @@ public class JIRAEntity :NSObject {
     }
 }
 
-public class JIRASchema{
-    var type:JIRASchemaType?
-    var system:JIRASchemaSystem?
-    var custom:String?
-    var customId:Int?
-    var items:String?
-    func applyData(data:[AnyHashable:Any]){
+public class JIRATicket {
+    
+    required public init() { }
+    
+    public var project: JIRAProject!
+    public var issueType: JIRAIssueType!
+    public var lables: [String]?
+    public var summary: String?
+    public var ticketDescription: String?
+    public var attachments: [Any]?
+    
+    public func export() -> [String: Any] {
+        var data = [String: Any]()
+        data[JIRASchemaType.project.rawValue] = self.project.export()
+        data[JIRASchemaType.issuetype.rawValue] = self.issueType.export()
+        data[JIRASchemaSystem.labels.rawValue] = self.lables
+        data[JIRASchemaSystem.summary.rawValue] = self.summary
+        data[JIRASchemaSystem.description.rawValue] = self.ticketDescription
+        return data
+    }
+    
+}
+
+public class JIRASchema {
+    var type: JIRASchemaType?
+    var system: JIRASchemaSystem?
+    var custom: String?
+    var customId: Int?
+    var items: String?
+    func applyData(data: [AnyHashable:Any]) {
         if let typeStr = data["type"] as? String  {
             if let type = JIRASchemaType(rawValue:typeStr) {
                 self.type = type
@@ -83,11 +110,11 @@ public class JIRASchema{
     }
 }
 
-public class JIRAAllowedValue:JIRAEntity,DisplayClass {
-    public var id:String?
-    public var name:String?
-    var value:String?
-    func applyData(data:[AnyHashable:Any]){
+public class JIRAAllowedValue: JIRAEntity, DisplayClass {
+    public var id: String?
+    public var name: String?
+    var value: String?
+    func applyData(data: [AnyHashable:Any]) {
         if let id = data["id"] as? String {
             self.id = id
         }
@@ -112,16 +139,16 @@ public class JIRAAllowedValue:JIRAEntity,DisplayClass {
     }
     
     
-    override func export()->Any?{
+    override func export() -> Any? {
         return ["id":id ?? "","name":name ?? "","value":value ?? ""]
     }
 }
 
 
-class JIRAJQLValue:JIRAEntity,DisplayClass{
-    var displayName:String?
-    var value:String?
-    func applyData(data:[AnyHashable:Any]){
+class JIRAJQLValue: JIRAEntity, DisplayClass{
+    var displayName: String?
+    var value: String?
+    func applyData(data: [AnyHashable:Any]) {
         if let displayName = data["displayName"] as? String {
             self.displayName = displayName
         }
@@ -143,20 +170,21 @@ class JIRAJQLValue:JIRAEntity,DisplayClass{
     }
     
     
-    override func export()->Any?{
+    override func export() -> Any? {
         return ["displayName":displayName ?? "","value":value ?? ""]
     }
 }
 
 
-public class JIRALabel:JIRAEntity,DisplayClass{
-    public var labelVal:String?
-    var html:String?
+public class JIRALabel: JIRAEntity, DisplayClass {
+    public var labelVal: String?
+    var html: String?
+    
     required public init() {
         super.init()
     }
     
-    func applyData(data:[AnyHashable:Any]){
+    func applyData(data: [AnyHashable: Any]) {
         if let label = data["label"] as? String {
             self.labelVal = label
         }
@@ -176,15 +204,16 @@ public class JIRALabel:JIRAEntity,DisplayClass{
     }
 }
 
-class JIRAUser:JIRAEntity,DisplayClass{
-    var displayName:String?
-    var key:String?
-    var emailAddress:String?
-    var active:Bool?
-    var timeZone:String?
-    var locale:String?
-    var name:String?
-    func applyData(data:[AnyHashable:Any]){
+
+class JIRAUser: JIRAEntity, DisplayClass {
+    var displayName: String?
+    var key: String?
+    var emailAddress: String?
+    var active: Bool?
+    var timeZone: String?
+    var locale: String?
+    var name: String?
+    func applyData(data: [AnyHashable: Any]) {
         if let displayName = data["displayName"] as? String {
             self.displayName = displayName
         }
@@ -214,7 +243,7 @@ class JIRAUser:JIRAEntity,DisplayClass{
         }
     }
     
-    override func export()->Any?{
+    override func export() -> Any? {
         return [
             "key":key ?? "",
             "name":name ?? ""
@@ -222,23 +251,23 @@ class JIRAUser:JIRAEntity,DisplayClass{
     }
 }
 
-public class JIRAField{
-    var required:Bool = false
-    var schema:JIRASchema?
-    var identifier:String?
-    var name:String?
-    var autoCompleteUrl:String?
-    var hasDefaultValue:Bool = false
-    var operations:[JIRAOperations]?
-    var allowedValues:[JIRAAllowedValue]?
-    var raw:[AnyHashable:Any]?
+class JIRAField {
+    var required: Bool = false
+    var schema: JIRASchema?
+    var identifier: String?
+    var name: String?
+    var autoCompleteUrl: String?
+    var hasDefaultValue: Bool = false
+    var operations: [JIRAOperations]?
+    var allowedValues: [JIRAAllowedValue]?
+    var raw: [AnyHashable:Any]?
     
-    func applyData(data:[AnyHashable:Any]){
+    func applyData(data: [AnyHashable: Any]) {
         self.raw = data
         if let required = data["required"] as? Bool {
             self.required = required
         }
-        if let schemaData = data["schema"] as? [AnyHashable:Any] {
+        if let schemaData = data["schema"] as? [AnyHashable: Any] {
             let schema = JIRASchema()
             schema.applyData(data: schemaData)
             self.schema = schema
@@ -246,7 +275,7 @@ public class JIRAField{
         if let name = data["name"] as? String {
             self.name = name
         }
-        if let operations = data["operations"] as? [String]{
+        if let operations = data["operations"] as? [String] {
             let ops = operations.flatMap({ (operation) -> JIRAOperations? in
                 return JIRAOperations(rawValue:operation)
             })
@@ -261,7 +290,7 @@ public class JIRAField{
         if let hasDefaultValue = data["hasDefaultValue"] as? Bool {
             self.hasDefaultValue = hasDefaultValue
         }
-        if let allowedValues = data["allowedValues"] as? [[AnyHashable:Any]] {
+        if let allowedValues = data["allowedValues"] as? [[AnyHashable: Any]] {
             var allowedValuesOutput = [JIRAAllowedValue]()
             allowedValues.forEach({ (allowedValueData) in
                 let allowedValue = JIRAAllowedValue()
@@ -273,15 +302,15 @@ public class JIRAField{
     }
 }
 
-public class JIRAIssueType: JIRAEntity{
-    open var id:String?
+public class JIRAIssueType: JIRAEntity {
+    var id:String?
     var desc:String?
     var iconUrl:String?
     open var name:String?
     var subtask:Bool = false
     var fields:[JIRAField]?
     
-    func applyData(data:[AnyHashable:Any]){
+    func applyData(data:[AnyHashable: Any]) {
         if let id = data["id"] as? String {
             self.id = id
         }
@@ -295,7 +324,7 @@ public class JIRAIssueType: JIRAEntity{
             self.name = name
         }
         var fields = [JIRAField]()
-        if let jiraFields = data["fields"] as? [AnyHashable:Any] {
+        if let jiraFields = data["fields"] as? [AnyHashable: Any] {
             jiraFields.forEach({ (key,value) in
                 if let v = value as? [AnyHashable:Any], let identifier = key as? String {
                     let field = JIRAField()
@@ -308,18 +337,18 @@ public class JIRAIssueType: JIRAEntity{
         self.fields = fields
     }
     
-    override func export()->Any?{
+    override func export() -> Any? {
         return ["id":id ?? "","name":name ?? ""]
     }
 }
 
 public class JIRAProject:JIRAEntity {
-    public var id:String?
-    public var key:String?
-    public var name:String?
-    var avatarUrls:[String:String]?
-    open var issueTypes:[JIRAIssueType]?
-    func applyData(data:[AnyHashable:Any]){
+    public var id: String?
+    public var key: String?
+    public var name: String?
+    var avatarUrls: [String: String]?
+    open var issueTypes: [JIRAIssueType]?
+    func applyData(data:[AnyHashable: Any]) {
         if let id = data["id"] as? String {
             self.id = id
         }
@@ -329,7 +358,7 @@ public class JIRAProject:JIRAEntity {
         if let name = data["name"] as? String {
             self.name = name
         }
-        if let issueTypes = data["issuetypes"] as? [[AnyHashable:Any]] {
+        if let issueTypes = data["issuetypes"] as? [[AnyHashable: Any]] {
             var issueTypesOutput = [JIRAIssueType]()
             issueTypes.forEach({ (issueTypeData) in
                 let issueType = JIRAIssueType()
@@ -340,84 +369,7 @@ public class JIRAProject:JIRAEntity {
         }
     }
     
-    override func export()->Any?{
+    override func export() -> Any? {
         return ["id":id ?? "","name":name ?? ""]
-    }
-}
-
-class JIRAIssueSection:JIRAEntity,DisplayClass,ChildrenClass {
-    var labelStr:String?
-    var sub:String?
-    var id:String?
-    var issues:[JIRAEntity]?
-    func applyData(data:[AnyHashable:Any]){
-        if let id = data["id"] as? String {
-            self.id = id
-        }
-        if let sub = data["sub"] as? String {
-            self.sub = sub
-        }
-        if let label = data["label"] as? String {
-            self.labelStr = label
-        }
-        var issues = [JIRAIssue]()
-        if let ary = data["issues"] as? [[AnyHashable:Any]] {
-            ary.forEach({ (item) in
-                let issue = JIRAIssue()
-                issue.applyData(data: item)
-                issues.append(issue)
-            })
-        }
-        self.issues = issues
-    }
-    
-    var children: [Any]?{
-        get{
-            return issues
-        }
-    }
-    
-    var label: String? {
-        get{
-            return labelStr
-        }
-    }
-}
-
-class JIRAIssue:JIRAEntity,DisplayClass {
-    var key:String?
-    var keyHtml:String?
-    var img:String?
-    var summary:String?
-    var summaryText:String?
-    func applyData(data:[AnyHashable:Any]){
-        if let key = data["key"] as? String {
-            self.key = key
-        }
-        if let keyHtml = data["keyHtml"] as? String {
-            self.keyHtml = keyHtml
-        }
-        if let img = data["img"] as? String {
-            self.img = img
-        }
-        if let summary = data["summary"] as? String {
-            self.summary = summary
-        }
-        if let summaryText = data["summaryText"] as? String {
-            self.summaryText = summaryText
-        }
-    }
-    
-    var label: String? {
-        get{
-            var output = ""
-            if let key = self.key {
-                output = key
-            }
-            if let summary = self.summary {
-                output += " - " + summary
-            }
-            return output
-        }
     }
 }

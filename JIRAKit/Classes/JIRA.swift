@@ -218,33 +218,13 @@ public class JIRA {
         return "\(UIDevice.current.model) \(systemVersion) appVersion: \(versionStr) - build: \(buildStr)"
     }
     
-    private func createDataTransferObject(_ issueData:[AnyHashable:Any]) -> [String:Any]{
-        var data = [String:Any]()
-        issueData.forEach { (key,value) in
-            if let key = key as? String {
-                if value is String {
-                    data[key] = value
-                }else if  let jiraEntity = value as? JIRAEntity {
-                    data[key] = jiraEntity.export()
-                }else if let jiraEntityAry = value as? [JIRAEntity] {
-                    let entities = jiraEntityAry.map({ (entity) -> Any? in
-                        return entity.export()
-                    })
-                    data[key] = entities
-                }
-            }
-        }
-        
-        return ["fields":data]
-    }
-    
-    public func create(issueData:[AnyHashable:Any], completion: @escaping (_ error:String?,_ key:String?) -> Void){
+    public func create(issueData: JIRATicket, completion: @escaping (_ error:String?,_ key:String?) -> Void){
         guard let url = URL(string: "\(host!)/\(JIRA.url_issue)") else {
             print("JIRA KIT Error - Create url invalid")
             completion("Create url invalid", nil)
             return
         }
-        let data = createDataTransferObject(issueData)
+        let data = ["fields": issueData.export()]
         var request = URLRequest(url: url)
         request.addValue("application/json", forHTTPHeaderField: "Accept")
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -260,7 +240,7 @@ public class JIRA {
                 do {
                     let json = try JSONSerialization.jsonObject(with: data!, options: .allowFragments)  as? NSDictionary
                     if let key = json?.object(forKey: "key") as? String {
-                        if let attachments = issueData["attachment"] as? [Any] {
+                        if let attachments = issueData.attachments as? [Any] {
                             self.uploadAttachments(key: key, attachments: attachments, completion: completion)
                         }else{
                             completion(nil, key)
